@@ -1,4 +1,5 @@
 ﻿using Core.Entities;
+using Core.Interfaces;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,25 +12,29 @@ namespace API.Controllers
     [Route("api/[controller]")]
     public class ProductsController : ControllerBase
     {
-        private readonly ECommerceDbContext _dbContext;
+        private readonly IGenericRepository<Product> _productRepo;
+        private readonly IGenericRepository<ProductBrand> _brandRepo;
+        private readonly IGenericRepository<ProductType> _typeRepo;
 
-        public ProductsController(ECommerceDbContext dbContext)
+        public ProductsController(IGenericRepository<Product> productRepo,
+            IGenericRepository<ProductBrand> brandRepo,
+            IGenericRepository<ProductType> typeRepo)
         {
-            _dbContext = dbContext;
+            _productRepo = productRepo;
+            _brandRepo = brandRepo;
+            _typeRepo = typeRepo;
         }
 
         [HttpGet]
         public async Task<ActionResult<List<Product>>> GetProducts()
         {
-            var products = await _dbContext.Products.ToListAsync();
-
-            return Ok(products);
+            return Ok(await _productRepo.GetAllAsync());
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Product>> GetProduct(int id)
         {
-            var product = await _dbContext.Products.FirstOrDefaultAsync(x => x.Id == id);
+            var product = await _productRepo.GetByIdAsync(id);
 
             if (product is null)
             {
@@ -37,6 +42,18 @@ namespace API.Controllers
             }
 
             return Ok(product);
+        }
+
+        [HttpGet("brands")]
+        public async Task<ActionResult<List<ProductBrand>>> GetProductBrands()
+        {
+            return Ok(await _brandRepo.GetAllAsync());
+        }
+
+        [HttpGet("types")]
+        public async Task<ActionResult<List<ProductType>>> GetProductTypes()
+        {
+            return Ok(await _typeRepo.GetAllAsync());
         }
     }
 }
