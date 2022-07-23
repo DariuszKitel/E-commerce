@@ -1,9 +1,13 @@
-﻿using Core.Entities;
+﻿using API.Dtos;
+using AutoMapper;
+using Core.Entities;
 using Core.Interfaces;
+using Core.Specifications;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace API.Controllers
@@ -15,33 +19,44 @@ namespace API.Controllers
         private readonly IGenericRepository<Product> _productRepo;
         private readonly IGenericRepository<ProductBrand> _brandRepo;
         private readonly IGenericRepository<ProductType> _typeRepo;
+        private readonly IMapper _mapper;
 
         public ProductsController(IGenericRepository<Product> productRepo,
             IGenericRepository<ProductBrand> brandRepo,
-            IGenericRepository<ProductType> typeRepo)
+            IGenericRepository<ProductType> typeRepo,
+            IMapper mapper)
         {
             _productRepo = productRepo;
             _brandRepo = brandRepo;
             _typeRepo = typeRepo;
+            _mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Product>>> GetProducts()
+        public async Task<ActionResult<IReadOnlyList<ProductToReturnDto>>> GetProducts()
         {
-            return Ok(await _productRepo.GetAllAsync());
+            var spec = new ProductsWithBrandsAndTypesSpecification();
+            var products = await _productRepo.ListAsync(spec);
+            var productsDto = _mapper.Map<IReadOnlyList<Product>,
+                IReadOnlyList<ProductToReturnDto>>(products);
+
+            return Ok(productsDto);
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Product>> GetProduct(int id)
+        public async Task<ActionResult<ProductToReturnDto>> GetProduct(int id)
         {
-            var product = await _productRepo.GetByIdAsync(id);
-
+            var spec = new ProductsWithBrandsAndTypesSpecification(id);
+            var product = await _productRepo.GetEntityWithSpec(spec);
+            
             if (product is null)
             {
                 return NotFound();
             }
 
-            return Ok(product);
+            var productDto = _mapper.Map<Product, ProductToReturnDto>(product);
+
+            return Ok(productDto);
         }
 
         [HttpGet("brands")]
